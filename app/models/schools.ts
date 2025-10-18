@@ -110,7 +110,7 @@ export class SchoolsModelBuilder implements ModelBuilder {
   }
 
   async build(): Promise<MapLayer> {
-    if (!this.dataProvider || !this.visualizationMode) {
+    if (!this.dataProvider) {
       throw new Error("Builder not properly configured");
     }
 
@@ -127,17 +127,14 @@ export class SchoolsModelBuilder implements ModelBuilder {
       console.log("Using cached schools data");
     }
 
-    // Process data based on visualization mode
-    const processedData = this.processDataset(
-      this.cachedData,
-      this.visualizationMode
-    );
+    // Process data - schools are always points
+    const processedData = this.processDataset(this.cachedData, "points");
 
-    // Return as MapLayer
+    // Return as MapLayer - schools always use points visualization
     return {
       id: "schools",
       data: processedData,
-      visualizationMode: this.visualizationMode,
+      visualizationMode: "points",
       visible: true,
     };
   }

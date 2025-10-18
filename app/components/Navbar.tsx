@@ -7,6 +7,7 @@ import { Dispatch, SetStateAction } from "react";
 import CircularProgress from "@mui/material/CircularProgress";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
+import MapIcon from "@mui/icons-material/Map";
 import ScatterPlotIcon from "@mui/icons-material/ScatterPlot";
 import SchoolIcon from "@mui/icons-material/School";
 import { VisualizationMode } from "../services/visualizationService";
@@ -20,6 +21,8 @@ interface Props {
   isChangingVisualizationMode: boolean;
   showSchools?: boolean;
   onToggleSchools?: () => void;
+  showZats?: boolean;
+  onToggleZats?: () => void;
 }
 
 export default function Navbar({
@@ -30,6 +33,8 @@ export default function Navbar({
   isChangingVisualizationMode,
   showSchools = false,
   onToggleSchools,
+  showZats = false,
+  onToggleZats,
 }: Props) {
   return (
     <AppBar
@@ -93,6 +98,16 @@ export default function Navbar({
               title={showSchools ? "Hide Schools" : "Show Schools"}
             >
               <SchoolIcon sx={{ color: showSchools ? "green" : "black" }} />
+            </Button>
+          )}
+          {onToggleZats && (
+            <Button
+              variant="text"
+              onClick={onToggleZats}
+              sx={{ display: "flex", p: 0, ml: 1 }}
+              title={showZats ? "Hide ZATs" : "Show ZATs"}
+            >
+              <MapIcon sx={{ color: showZats ? "blue" : "black" }} />
             </Button>
           )}
         </Box>

@@ -170,7 +170,7 @@ export class ZatsModelBuilder implements ModelBuilder {
   }
 
   async build(): Promise<MapLayer> {
-    if (!this.dataProvider || !this.filters || !this.visualizationMode) {
+    if (!this.dataProvider || !this.filters) {
       throw new Error("Builder not properly configured");
     }
 
@@ -191,11 +191,11 @@ export class ZatsModelBuilder implements ModelBuilder {
     // Process data (ZATs are always polygons)
     const processedData = this.processDataset(this.cachedData);
 
-    // Return as MapLayer
+    // Return as MapLayer - ZATs always use polygons visualization
     return {
       id: "zats",
       data: processedData,
-      visualizationMode: this.visualizationMode,
+      visualizationMode: "polygons",
       visible: true,
     };
   }

@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import {
   CircleMarker,
   MapContainer,
+  Polygon,
   Rectangle,
   TileLayer,
 } from "react-leaflet";
@@ -121,6 +122,49 @@ function MapContent({ layers }: MapComponentProps) {
     );
   };
 
+  const renderPolygons = (layer: MapLayer) => {
+    console.log(
+      "renderPolygons called for layer:",
+      layer.id,
+      "features:",
+      layer.data.features.length
+    );
+    return layer.data.features.map((feature: any, index: number) => {
+      // For polygons, geometry.coordinates is an array of rings
+      // Each ring is an array of [lng, lat] coordinates
+      const coordinates = feature.geometry.coordinates;
+
+      // Handle MultiPolygon (array of polygons) or single Polygon
+      const polygons = Array.isArray(coordinates[0][0][0])
+        ? coordinates // MultiPolygon
+        : [coordinates]; // Single Polygon
+
+      // Use color from feature properties
+      const color = feature.properties.color || "#ff0000";
+
+      return polygons.map((polygonCoords: any, polyIndex: number) => {
+        // Convert from [lng, lat] to [lat, lng] for Leaflet
+        const positions = polygonCoords[0].map((coord: [number, number]) => [
+          coord[1], // lat
+          coord[0], // lng
+        ]);
+
+        return (
+          <Polygon
+            key={`${layer.id}-${index}-${polyIndex}`}
+            positions={positions}
+            pathOptions={{
+              color: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+              fillColor: `rgb(${color[0]}, ${color[1]}, ${color[2]})`,
+              fillOpacity: color[3] / 255 || 0.3,
+              weight: 1,
+            }}
+          />
+        );
+      });
+    });
+  };
+
   const renderLayers = () => {
     return layers
       .filter((layer) => layer.visible !== false)
@@ -136,6 +180,8 @@ function MapContent({ layers }: MapComponentProps) {
             return renderPoints(layer);
           case "heatmap":
             return renderHeatmap(layer);
+          case "polygons":
+            return renderPolygons(layer);
           default:
             return null;
         }

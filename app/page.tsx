@@ -10,11 +10,13 @@ import Navbar from "./components/Navbar";
 import { SchoolsModelBuilder } from "./models/schools";
 import { VictimsModelBuilder } from "./models/victims";
 import { VisualizationMode } from "../types/map";
+import { ZatsModelBuilder } from "./models/zats";
 import { useFilters } from "./hooks/useFilters";
 
 export default function Home() {
   const [lastFetchedData, setLastFetchedData] = useState<any>(null);
   const [schoolsData, setSchoolsData] = useState<any>(null);
+  const [zatsData, setZatsData] = useState<any>(null);
 
   const [shouldOpenLeftBar, setShouldOpenLeftBar] = useState(false);
   const [visualizationMode, setVisualizationMode] =
@@ -22,6 +24,7 @@ export default function Home() {
   const [isChangingVisualizationMode, setIsChangingVisualizationMode] =
     useState(false);
   const [showSchools, setShowSchools] = useState(false);
+  const [showZats, setShowZats] = useState(false);
 
   // Use custom hooks for state management
   const { filters, debouncedFilters, setFilters } = useFilters();
@@ -91,10 +94,33 @@ export default function Home() {
     fetchSchoolsData();
   }, [showSchools, visualizationMode]);
 
+  // Fetch ZATs data when showZats is enabled
+  useEffect(() => {
+    if (!showZats) return;
+
+    async function fetchZatsData() {
+      console.log("🗺️ Fetching ZATs data...");
+
+      try {
+        const result = await new ZatsModelBuilder()
+          .withFilters({}) // Default filters for ZATs
+          .fetchWith(new DataProvider())
+          .build();
+
+        setZatsData(result);
+      } catch (error) {
+        console.error("❌ Failed to fetch ZATs data: ", error);
+      }
+    }
+
+    fetchZatsData();
+  }, [showZats]);
+
   // Combine layers
   const layers = [];
   if (lastFetchedData) layers.push(lastFetchedData);
   if (schoolsData && showSchools) layers.push(schoolsData);
+  if (zatsData && showZats) layers.push(zatsData);
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
@@ -106,6 +132,8 @@ export default function Home() {
         isChangingVisualizationMode={isChangingVisualizationMode}
         showSchools={showSchools}
         onToggleSchools={() => setShowSchools(!showSchools)}
+        showZats={showZats}
+        onToggleZats={() => setShowZats(!showZats)}
       />
       <LeftBar
         filters={filters}
@@ -131,7 +159,12 @@ export default function Home() {
         Schools: {schoolsData ? "YES" : "NO"} (
         {schoolsData?.data?.features?.length || 0})
         <br />
+        ZATs: {zatsData ? "YES" : "NO"} ({zatsData?.data?.features?.length || 0}
+        )
+        <br />
         Show Schools: {showSchools ? "YES" : "NO"}
+        <br />
+        Show ZATs: {showZats ? "YES" : "NO"}
         <br />
         Total Layers: {layers.length}
         <br />
