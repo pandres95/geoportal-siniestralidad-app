@@ -5,13 +5,17 @@ import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
 import { DataProvider } from "./providers/dataProvider";
 import LeftBar from "./components/LeftBar";
-import MapComponent from "./components/MapComponent";
 import Navbar from "./components/Navbar";
 import { SchoolsModelBuilder } from "./models/schools";
 import { VictimsModelBuilder } from "./models/victims";
 import { VisualizationMode } from "../types/map";
 import { ZatsModelBuilder } from "./models/zats";
+import dynamic from "next/dynamic";
 import { useFilters } from "./hooks/useFilters";
+
+const MapComponent = dynamic(() => import("./components/MapComponent"), {
+  ssr: false,
+});
 
 export default function Home() {
   const [lastFetchedData, setLastFetchedData] = useState<any>(null);

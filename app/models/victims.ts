@@ -59,7 +59,7 @@ export interface FilterConfig<T = any> {
 }
 
 export const victimFilterConfig: {
-  [K in keyof VictimFilters]: FilterConfig<VictimFilters[K]["value"]>;
+  [K in keyof VictimFilters]: FilterConfig;
 } = {
   edad: {
     label: "Edad",
@@ -68,7 +68,7 @@ export const victimFilterConfig: {
   },
   estado: {
     label: "Estado",
-    options: ["ILESO", "HERIDO", "MUERTO"],
+    options: ["ILESO", "HERIDO", "MUERTO"] as VictimStatus[],
   },
   condicion: {
     label: "Condición",
@@ -79,14 +79,14 @@ export const victimFilterConfig: {
       "MOTOCICLISTA",
       "PASAJERO",
       "PEATON",
-    ],
+    ] as (VictimCondition | "")[],
   },
   fecha: {
     label: "Fecha",
   },
   genero: {
     label: "Género",
-    options: ["FEMENINO", "MASCULINO", "SIN INFORMACION"],
+    options: ["FEMENINO", "MASCULINO", "SIN INFORMACION"] as VictimGender[],
   },
 };
 

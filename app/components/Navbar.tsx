@@ -10,7 +10,7 @@ import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 import MapIcon from "@mui/icons-material/Map";
 import ScatterPlotIcon from "@mui/icons-material/ScatterPlot";
 import SchoolIcon from "@mui/icons-material/School";
-import { VisualizationMode } from "../services/visualizationService";
+import { VisualizationMode } from "../../types/map";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 
 interface Props {

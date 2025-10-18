@@ -121,11 +121,11 @@ export default function LeftBar({ filters, setFilters, isOpened }: Props) {
                   )}
                 >
                   {config.options.map((option) => (
-                    <MenuItem key={String(option)} value={option}>
+                    <MenuItem key={String(option)} value={option as string}>
                       <Checkbox
                         checked={
                           Array.isArray(filter.value) &&
-                          filter.value.indexOf(option) > -1
+                          (filter.value as any[]).indexOf(option) > -1
                         }
                       />
                       <ListItemText primary={option} />
@@ -144,7 +144,7 @@ export default function LeftBar({ filters, setFilters, isOpened }: Props) {
                   onChange={(e) => handleValueChange(e.target.value)}
                 >
                   {config.options.map((option) => (
-                    <MenuItem key={option} value={option}>
+                    <MenuItem key={String(option)} value={option as string}>
                       {option || <em>Ninguna</em>}
                     </MenuItem>
                   ))}
