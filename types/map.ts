@@ -10,6 +10,7 @@ export interface MapFeature {
     [key: string]: any;
     color?: [number, number, number, number] | string; // RGBA for Deck.gl or hex for MapLibre
     weight?: number; // For heatmap
+    shape?: "circle" | "square"; // Shape for rendering
   };
 }
 

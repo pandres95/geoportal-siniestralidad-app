@@ -7,21 +7,21 @@ import { DataProvider } from "./providers/dataProvider";
 import LeftBar from "./components/LeftBar";
 import MapComponent from "./components/MapComponent";
 import Navbar from "./components/Navbar";
+import { SchoolsModelBuilder } from "./models/schools";
 import { VictimsModelBuilder } from "./models/victims";
 import { VisualizationMode } from "../types/map";
-import { ZatsModelBuilder } from "./models/zats";
 import { useFilters } from "./hooks/useFilters";
 
 export default function Home() {
   const [lastFetchedData, setLastFetchedData] = useState<any>(null);
-  const [zatData, setZatData] = useState<any>(null);
+  const [schoolsData, setSchoolsData] = useState<any>(null);
 
   const [shouldOpenLeftBar, setShouldOpenLeftBar] = useState(false);
   const [visualizationMode, setVisualizationMode] =
     useState<VisualizationMode>("points");
   const [isChangingVisualizationMode, setIsChangingVisualizationMode] =
     useState(false);
-  const [showZats, setShowZats] = useState(true);
+  const [showSchools, setShowSchools] = useState(false);
 
   // Use custom hooks for state management
   const { filters, debouncedFilters, setFilters } = useFilters();
@@ -42,15 +42,16 @@ export default function Home() {
     }
   };
 
-  // Fetch victims data
+  // Fetch data on component mount and when debounced filters change
   useEffect(() => {
-    async function fetchVictimsData() {
+    async function fetchData() {
       console.log(
         "🔍 Fetching victims data for visualization mode:",
         visualizationMode
       );
 
       try {
+        // Use actual victims data
         const result = await new VictimsModelBuilder()
           .withFilters(debouncedFilters as any) // Use debounced filters to avoid excessive API calls
           .withVisualizationMode(visualizationMode)
@@ -64,31 +65,36 @@ export default function Home() {
       }
     }
 
-    fetchVictimsData();
+    fetchData();
   }, [visualizationMode, debouncedFilters]); // Use debounced filters to prevent excessive API calls
 
-  // Fetch ZAT data
+  // Fetch schools data when showSchools is enabled
   useEffect(() => {
-    async function fetchZatData() {
-      if (!showZats) return;
+    if (!showSchools) return;
 
-      console.log("🔍 Fetching ZAT data");
+    async function fetchSchoolsData() {
+      console.log("🏫 Fetching schools data...");
 
       try {
-        const result = await new ZatsModelBuilder()
-          .withFilters({} as any) // ZATs don't need filters for now
-          .withVisualizationMode("polygons") // ZATs are polygons
+        const result = await new SchoolsModelBuilder()
+          .withFilters({}) // No filters for schools
+          .withVisualizationMode(visualizationMode)
           .fetchWith(new DataProvider())
           .build();
 
-        setZatData(result);
+        setSchoolsData(result);
       } catch (error) {
-        console.error("❌ Failed to fetch ZAT data: ", error);
+        console.error("❌ Failed to fetch schools data: ", error);
       }
     }
 
-    fetchZatData();
-  }, [showZats]); // Only refetch when showZats changes
+    fetchSchoolsData();
+  }, [showSchools, visualizationMode]);
+
+  // Combine layers
+  const layers = [];
+  if (lastFetchedData) layers.push(lastFetchedData);
+  if (schoolsData && showSchools) layers.push(schoolsData);
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
@@ -98,20 +104,15 @@ export default function Home() {
         visualizationMode={visualizationMode}
         onVisualizationModeChange={handleVisualizationModeChange}
         isChangingVisualizationMode={isChangingVisualizationMode}
-        currentModel={showZats ? "zats" : "victims"}
-        onModelChange={(model) => setShowZats(model === "zats")}
+        showSchools={showSchools}
+        onToggleSchools={() => setShowSchools(!showSchools)}
       />
       <LeftBar
         filters={filters}
         setFilters={setFilters}
         isOpened={shouldOpenLeftBar}
       />
-      <MapComponent
-        layers={[
-          ...(lastFetchedData ? [lastFetchedData] : []),
-          ...(zatData ? [zatData] : []),
-        ]}
-      />
+      <MapComponent layers={layers} />
       {/* Debug */}
       <div
         style={{
@@ -125,18 +126,14 @@ export default function Home() {
         }}
       >
         Victims: {lastFetchedData ? "YES" : "NO"} (
-        {lastFetchedData?.data?.features?.length || 0} features)
+        {lastFetchedData?.data?.features?.length || 0})
         <br />
-        ZATs: {zatData ? "YES" : "NO"} ({zatData?.data?.features?.length || 0}{" "}
-        features)
+        Schools: {schoolsData ? "YES" : "NO"} (
+        {schoolsData?.data?.features?.length || 0})
         <br />
-        Total Layers:{" "}
-        {
-          [
-            ...(zatData ? [zatData] : []),
-            ...(lastFetchedData ? [lastFetchedData] : []),
-          ].length
-        }
+        Show Schools: {showSchools ? "YES" : "NO"}
+        <br />
+        Total Layers: {layers.length}
         <br />
         Mode: {lastFetchedData?.visualizationMode || "none"}
       </div>
