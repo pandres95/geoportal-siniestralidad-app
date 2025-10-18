@@ -9,16 +9,19 @@ import MapComponent from "./components/MapComponent";
 import Navbar from "./components/Navbar";
 import { VictimsModelBuilder } from "./models/victims";
 import { VisualizationMode } from "../types/map";
+import { ZatsModelBuilder } from "./models/zats";
 import { useFilters } from "./hooks/useFilters";
 
 export default function Home() {
   const [lastFetchedData, setLastFetchedData] = useState<any>(null);
+  const [zatData, setZatData] = useState<any>(null);
 
   const [shouldOpenLeftBar, setShouldOpenLeftBar] = useState(false);
   const [visualizationMode, setVisualizationMode] =
     useState<VisualizationMode>("points");
   const [isChangingVisualizationMode, setIsChangingVisualizationMode] =
     useState(false);
+  const [showZats, setShowZats] = useState(true);
 
   // Use custom hooks for state management
   const { filters, debouncedFilters, setFilters } = useFilters();
@@ -39,16 +42,15 @@ export default function Home() {
     }
   };
 
-  // Fetch data on component mount and when debounced filters change
+  // Fetch victims data
   useEffect(() => {
-    async function fetchData() {
+    async function fetchVictimsData() {
       console.log(
         "🔍 Fetching victims data for visualization mode:",
         visualizationMode
       );
 
       try {
-        // Use actual victims data
         const result = await new VictimsModelBuilder()
           .withFilters(debouncedFilters as any) // Use debounced filters to avoid excessive API calls
           .withVisualizationMode(visualizationMode)
@@ -62,8 +64,31 @@ export default function Home() {
       }
     }
 
-    fetchData();
+    fetchVictimsData();
   }, [visualizationMode, debouncedFilters]); // Use debounced filters to prevent excessive API calls
+
+  // Fetch ZAT data
+  useEffect(() => {
+    async function fetchZatData() {
+      if (!showZats) return;
+
+      console.log("🔍 Fetching ZAT data");
+
+      try {
+        const result = await new ZatsModelBuilder()
+          .withFilters({} as any) // ZATs don't need filters for now
+          .withVisualizationMode("polygons") // ZATs are polygons
+          .fetchWith(new DataProvider())
+          .build();
+
+        setZatData(result);
+      } catch (error) {
+        console.error("❌ Failed to fetch ZAT data: ", error);
+      }
+    }
+
+    fetchZatData();
+  }, [showZats]); // Only refetch when showZats changes
 
   return (
     <Box sx={{ width: "100vw", height: "100vh", overflow: "hidden" }}>
@@ -73,13 +98,20 @@ export default function Home() {
         visualizationMode={visualizationMode}
         onVisualizationModeChange={handleVisualizationModeChange}
         isChangingVisualizationMode={isChangingVisualizationMode}
+        currentModel={showZats ? "zats" : "victims"}
+        onModelChange={(model) => setShowZats(model === "zats")}
       />
       <LeftBar
         filters={filters}
         setFilters={setFilters}
         isOpened={shouldOpenLeftBar}
       />
-      <MapComponent layers={lastFetchedData ? [lastFetchedData] : []} />
+      <MapComponent
+        layers={[
+          ...(lastFetchedData ? [lastFetchedData] : []),
+          ...(zatData ? [zatData] : []),
+        ]}
+      />
       {/* Debug */}
       <div
         style={{
@@ -92,15 +124,21 @@ export default function Home() {
           fontSize: "12px",
         }}
       >
-        Data: {lastFetchedData ? "YES" : "NO"}
+        Victims: {lastFetchedData ? "YES" : "NO"} (
+        {lastFetchedData?.data?.features?.length || 0} features)
         <br />
-        Layers: {lastFetchedData ? 1 : 0}
+        ZATs: {zatData ? "YES" : "NO"} ({zatData?.data?.features?.length || 0}{" "}
+        features)
         <br />
-        Features: {lastFetchedData?.data?.features?.length || 0}
+        Total Layers:{" "}
+        {
+          [
+            ...(zatData ? [zatData] : []),
+            ...(lastFetchedData ? [lastFetchedData] : []),
+          ].length
+        }
         <br />
         Mode: {lastFetchedData?.visualizationMode || "none"}
-        <br />
-        Passed: {JSON.stringify(lastFetchedData ? [lastFetchedData].length : 0)}
       </div>
     </Box>
   );

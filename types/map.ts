@@ -1,4 +1,4 @@
-export type VisualizationMode = "points" | "heatmap" | "clusters";
+export type VisualizationMode = "points" | "heatmap" | "clusters" | "polygons";
 
 export interface MapFeature {
   type: "Feature";

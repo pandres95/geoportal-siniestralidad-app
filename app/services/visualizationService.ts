@@ -6,7 +6,7 @@ import {
 
 import { AccidentData } from "./dataService";
 
-export type VisualizationMode = "points" | "heatmap" | "clusters";
+export type VisualizationMode = "points" | "heatmap" | "clusters" | "polygons";
 
 export interface VisualizationLayer {
   layer: google.maps.Data | google.maps.visualization.HeatmapLayer;
@@ -39,6 +39,9 @@ export class VisualizationService {
         break;
       case "clusters":
         this.createClusterVisualization(data);
+        break;
+      case "polygons":
+        this.createPolygonVisualization(data);
         break;
     }
   }
@@ -322,6 +325,60 @@ export class VisualizationService {
       };
 
       this.currentLayers.push(clusterLayer);
+    }
+  }
+
+  private createPolygonVisualization(data: AccidentData | VictimData): void {
+    console.log(
+      "🎨 Creating polygon visualization with",
+      data.features.length,
+      "features"
+    );
+
+    const layer = new google.maps.Data({ map: this.map });
+
+    layer.setStyle((feature) => {
+      // Get the color from feature properties (should be RGBA array)
+      const color = feature.getProperty("color") as
+        | [number, number, number, number]
+        | string;
+
+      if (Array.isArray(color) && color.length === 4) {
+        // RGBA array - convert to rgba() string
+        const [r, g, b, a] = color;
+        return {
+          fillColor: `rgba(${r}, ${g}, ${b}, ${a})`,
+          strokeColor: `rgba(${r}, ${g}, ${b}, 1)`,
+          strokeWeight: 1,
+          fillOpacity: a,
+        };
+      } else if (typeof color === "string") {
+        // Hex color string
+        return {
+          fillColor: color,
+          strokeColor: color,
+          strokeWeight: 1,
+          fillOpacity: 0.6,
+        };
+      } else {
+        // Default styling
+        return {
+          fillColor: "rgba(255, 0, 0, 0.6)",
+          strokeColor: "rgba(255, 0, 0, 1)",
+          strokeWeight: 1,
+          fillOpacity: 0.6,
+        };
+      }
+    });
+
+    console.log("📊 Adding GeoJSON polygon data to layer");
+    try {
+      layer.addGeoJson(data as any);
+      console.log("✅ Polygon GeoJSON added successfully");
+
+      this.currentLayers.push({ layer, type: "polygons", data });
+    } catch (error) {
+      console.error("❌ Error adding polygon GeoJSON:", error);
     }
   }
 

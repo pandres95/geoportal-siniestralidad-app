@@ -8,6 +8,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import FilterAltOutlinedIcon from "@mui/icons-material/FilterAltOutlined";
 import ScatterPlotIcon from "@mui/icons-material/ScatterPlot";
+import SquareIcon from "@mui/icons-material/Square";
 import { VisualizationMode } from "../services/visualizationService";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 
@@ -17,6 +18,8 @@ interface Props {
   visualizationMode: VisualizationMode;
   onVisualizationModeChange: (mode: VisualizationMode) => void;
   isChangingVisualizationMode: boolean;
+  currentModel: "victims" | "zats";
+  onModelChange: (model: "victims" | "zats") => void;
 }
 
 export default function Navbar({
@@ -25,6 +28,8 @@ export default function Navbar({
   visualizationMode,
   onVisualizationModeChange,
   isChangingVisualizationMode,
+  currentModel,
+  onModelChange,
 }: Props) {
   return (
     <AppBar
@@ -79,6 +84,22 @@ export default function Navbar({
             ) : (
               <WhatshotIcon sx={{ color: "black" }} />
             )}
+          </Button>
+          <Button
+            variant="text"
+            onClick={() =>
+              onModelChange(currentModel === "victims" ? "zats" : "victims")
+            }
+            sx={{ display: "flex", p: 0, ml: 1 }}
+            title={
+              currentModel === "zats"
+                ? "Switch to Victims Data"
+                : "Switch to ZAT Zones"
+            }
+          >
+            <SquareIcon
+              sx={{ color: currentModel === "zats" ? "blue" : "black" }}
+            />
           </Button>
         </Box>
         <img src="/escudo.png" alt="Escudo UNAL" style={{ height: 40 }} />

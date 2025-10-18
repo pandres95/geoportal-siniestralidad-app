@@ -2,7 +2,7 @@
 
 import "leaflet/dist/leaflet.css";
 
-import { CircleMarker, MapContainer, TileLayer } from "react-leaflet";
+import { CircleMarker, MapContainer, Polygon, TileLayer } from "react-leaflet";
 import { MapComponentProps, MapLayer } from "../../types/map";
 import { useEffect, useState } from "react";
 
@@ -92,6 +92,56 @@ function MapContent({ layers }: MapComponentProps) {
     );
   };
 
+  const renderPolygons = (layer: MapLayer) => {
+    console.log(
+      "renderPolygons called for layer:",
+      layer.id,
+      "features:",
+      layer.data.features.length
+    );
+    return layer.data.features.map((feature: any, index: number) => {
+      // Handle MultiPolygon geometry
+      const coordinates = feature.geometry.coordinates;
+      const color = feature.properties.color;
+
+      // Convert RGBA array to string if needed
+      let fillColor: string;
+      let strokeColor: string;
+      if (Array.isArray(color) && color.length === 4) {
+        const [r, g, b, a] = color;
+        fillColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+        strokeColor = `rgba(${r}, ${g}, ${b}, 1)`;
+      } else if (typeof color === "string") {
+        fillColor = color;
+        strokeColor = color;
+      } else {
+        fillColor = "rgba(255, 0, 0, 0.6)";
+        strokeColor = "rgba(255, 0, 0, 1)";
+      }
+
+      // For MultiPolygon, coordinates is [[[polygon1], [polygon2], ...]]
+      // We need to convert from [lng, lat] to [lat, lng] for Leaflet
+      const polygons = coordinates.map((polygonCoords: any) =>
+        polygonCoords.map((ring: any) =>
+          ring.map(([lng, lat]: [number, number]) => [lat, lng])
+        )
+      );
+
+      return (
+        <Polygon
+          key={`${layer.id}-${index}`}
+          positions={polygons}
+          pathOptions={{
+            color: strokeColor,
+            fillColor: fillColor,
+            fillOpacity: 0.6,
+            weight: 1,
+          }}
+        />
+      );
+    });
+  };
+
   const renderLayers = () => {
     return layers
       .filter((layer) => layer.visible !== false)
@@ -107,6 +157,8 @@ function MapContent({ layers }: MapComponentProps) {
             return renderPoints(layer);
           case "heatmap":
             return renderHeatmap(layer);
+          case "polygons":
+            return renderPolygons(layer);
           default:
             return null;
         }
