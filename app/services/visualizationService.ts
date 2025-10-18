@@ -1,3 +1,9 @@
+import {
+  VICTIM_STATUS_COLORS,
+  VictimData,
+  VictimStatus,
+} from "../models/victims";
+
 import { AccidentData } from "./dataService";
 
 export type VisualizationMode = "points" | "heatmap" | "clusters";
@@ -17,7 +23,10 @@ export class VisualizationService {
     this.map = map;
   }
 
-  setVisualizationMode(mode: VisualizationMode, data: AccidentData): void {
+  setVisualizationMode(
+    mode: VisualizationMode,
+    data: AccidentData | VictimData
+  ): void {
     this.clearCurrentVisualization();
     this.currentMode = mode;
 
@@ -34,30 +43,109 @@ export class VisualizationService {
     }
   }
 
-  private createPointVisualization(data: AccidentData): void {
-    const layer = new google.maps.Data({ map: this.map });
+  private createPointVisualization(data: AccidentData | VictimData): void {
+    console.log(
+      "🎨 Creating point visualization with",
+      data.features.length,
+      "features"
+    );
 
-    layer.setStyle((feature) => {
-      const type = feature.getProperty("type") as "injured" | "dead";
-      const isDead = type === "dead";
+    // Analyze data distribution
+    const statusCounts: Record<string, number> = {};
+    const coordSamples: Array<{ lat: number; lng: number; estado: string }> =
+      [];
 
-      return {
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 6,
-          fillColor: isDead ? "red" : "blue",
-          fillOpacity: 0.9,
-          strokeWeight: 1,
-          strokeColor: "#fff",
-        },
-      };
+    data.features.forEach((feature, index) => {
+      const estado =
+        feature.properties.estado || feature.properties.type || "unknown";
+      statusCounts[estado] = (statusCounts[estado] || 0) + 1;
+
+      if (index < 10) {
+        // Sample first 10 coordinates
+        coordSamples.push({
+          lat: feature.geometry.coordinates[1],
+          lng: feature.geometry.coordinates[0],
+          estado: estado,
+        });
+      }
     });
 
-    layer.addGeoJson(data as any);
-    this.currentLayers.push({ layer, type: "points", data });
+    console.table(coordSamples);
+    console.log("📊 Status distribution:", statusCounts);
+
+    const layer = new google.maps.Data({ map: this.map });
+
+    let featureCount = 0;
+    layer.setStyle((feature) => {
+      featureCount++;
+      // Check if this is victim data (has estado property)
+      const estado = feature.getProperty("estado") as VictimStatus;
+
+      if (estado) {
+        // Victim data - use status-based coloring
+        return {
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 6,
+            fillColor: VICTIM_STATUS_COLORS[estado],
+            fillOpacity: 0.9,
+            strokeWeight: 1,
+            strokeColor: "#fff",
+          },
+        };
+      } else {
+        // Legacy accident data - use type-based coloring
+        const type = feature.getProperty("type") as "injured" | "dead";
+        const isDead = type === "dead";
+
+        return {
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 6,
+            fillColor: isDead ? "red" : "blue",
+            fillOpacity: 0.9,
+            strokeWeight: 1,
+            strokeColor: "#fff",
+          },
+        };
+      }
+    });
+
+    console.log("📊 Adding GeoJSON data to layer");
+    try {
+      layer.addGeoJson(data as any);
+      console.log("✅ GeoJSON added successfully");
+
+      // Add event listener to check when features are added
+      let addedFeatures = 0;
+      layer.addListener("addfeature", (event: any) => {
+        addedFeatures++;
+        if (addedFeatures <= 5) {
+          console.log(
+            "📍 Feature added:",
+            addedFeatures,
+            event.feature.getProperty("estado")
+          );
+        }
+      });
+
+      this.currentLayers.push({ layer, type: "points", data });
+
+      // Log layer info after a short delay to allow features to be added
+      setTimeout(() => {
+        console.log("✅ Point visualization created - checking features...");
+        // Try to get features from the layer
+        const features = layer.getFeatureById
+          ? "Layer has getFeatureById"
+          : "No getFeatureById method";
+        console.log("Layer features check:", features);
+      }, 100);
+    } catch (error) {
+      console.error("❌ Error adding GeoJSON:", error);
+    }
   }
 
-  private createHeatmapVisualization(data: AccidentData): void {
+  private createHeatmapVisualization(data: AccidentData | VictimData): void {
     // Check if visualization API is available
     if (!window.google.maps.visualization) {
       console.error("Google Maps Visualization API not loaded");
@@ -110,7 +198,7 @@ export class VisualizationService {
     }
   }
 
-  private createAlternativeHeatmap(data: AccidentData): void {
+  private createAlternativeHeatmap(data: AccidentData | VictimData): void {
     // Alternative implementation using point clustering with opacity
     console.log(
       "🔄 Creating alternative heatmap using enhanced point clustering"
@@ -128,8 +216,20 @@ export class VisualizationService {
       bounds.extend(position);
 
       const severity = feature.properties?.severity || 1;
-      const type = feature.properties?.type as "injured" | "dead";
-      const isDead = type === "dead";
+      const estado = feature.properties?.estado as VictimStatus;
+      let fillColor: string;
+
+      if (estado) {
+        // Victim data - use status-based coloring
+        fillColor = VICTIM_STATUS_COLORS[estado]
+          .replace(")", ", 0.3)")
+          .replace("rgb", "rgba");
+      } else {
+        // Legacy accident data - use type-based coloring
+        const type = feature.properties?.type as "injured" | "dead";
+        const isDead = type === "dead";
+        fillColor = isDead ? "rgba(255, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.2)";
+      }
 
       // Create multiple semi-transparent markers for heatmap effect
       for (let i = 0; i < severity; i++) {
@@ -141,7 +241,7 @@ export class VisualizationService {
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
             scale: 8,
-            fillColor: isDead ? "rgba(255, 0, 0, 0.3)" : "rgba(0, 0, 255, 0.2)",
+            fillColor,
             fillOpacity: 0.4,
             strokeWeight: 0,
           },
@@ -170,7 +270,7 @@ export class VisualizationService {
     }
   }
 
-  private createClusterVisualization(data: AccidentData): void {
+  private createClusterVisualization(data: AccidentData | VictimData): void {
     // For clustering, we'll use marker clusters
     const markers: google.maps.Marker[] = [];
 
@@ -179,15 +279,25 @@ export class VisualizationService {
       if (!coordinates || coordinates.length < 2) return;
 
       const [lng, lat] = coordinates;
-      const type = feature.properties?.type as "injured" | "dead";
-      const isDead = type === "dead";
+      const estado = feature.properties?.estado as VictimStatus;
+      let fillColor: string;
+
+      if (estado) {
+        // Victim data - use status-based coloring
+        fillColor = VICTIM_STATUS_COLORS[estado];
+      } else {
+        // Legacy accident data - use type-based coloring
+        const type = feature.properties?.type as "injured" | "dead";
+        const isDead = type === "dead";
+        fillColor = isDead ? "red" : "blue";
+      }
 
       const marker = new google.maps.Marker({
         position: { lat, lng },
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 6,
-          fillColor: isDead ? "red" : "blue",
+          fillColor,
           fillOpacity: 0.9,
           strokeWeight: 1,
           strokeColor: "#fff",
@@ -230,7 +340,7 @@ export class VisualizationService {
     return this.currentMode;
   }
 
-  updateData(data: AccidentData): void {
+  updateData(data: AccidentData | VictimData): void {
     if (this.currentLayers.length > 0) {
       this.setVisualizationMode(this.currentMode, data);
     } else {

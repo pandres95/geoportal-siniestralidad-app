@@ -1,4 +1,11 @@
-import { Filters } from "../components/LeftBar";
+import {
+  VICTIM_STATUS_SEVERITY,
+  VictimData,
+  VictimStatus,
+} from "../models/victims";
+
+import { DataProvider } from "../providers/dataProvider";
+import { Filters } from "../../types/filters";
 
 export interface AccidentData {
   features: Array<{
@@ -13,36 +20,77 @@ export interface AccidentData {
 }
 
 export interface DataServiceResult {
+  safe: AccidentData;
   injured: AccidentData;
   dead: AccidentData;
 }
 
-const BASE_URL = "https://geoportal-siniestralidad-vial.onrender.com/";
-
 export class DataService {
   static async fetchAccidentData(
     filters: Filters,
-    bounds: [number, number, number, number]
+    bounds: [number, number, number, number],
+    zoom?: number
   ): Promise<DataServiceResult> {
-    const [minLng, minLat, maxLng, maxLat] = bounds;
-
-    const injuredUrl = new URL(
-      `${BASE_URL}/collections/public.accidents_injuries/items.json?limit=1000&filter=edad BETWEEN ${filters.ageRange[0]} AND ${filters.ageRange[1]}&bbox=${minLng},${minLat},${maxLng},${maxLat}`
+    // Use the new victims table instead of separate injured/dead tables
+    const victimsData = await DataService.fetchVictimData(
+      filters,
+      bounds,
+      zoom
     );
 
-    const deadUrl = new URL(
-      `${BASE_URL}/collections/public.accidents_fatalities/items.json?limit=1000&filter=edad BETWEEN ${filters.ageRange[0]} AND ${filters.ageRange[1]}&bbox=${minLng},${minLat},${maxLng},${maxLat}`
-    );
+    // Split victims data into injured and dead for backwards compatibility
+    const safe = {
+      type: "FeatureCollection",
+      features: victimsData.features.filter(
+        (feature) => feature.properties.estado === "ILESO"
+      ),
+    };
+    const injured = {
+      type: "FeatureCollection",
+      features: victimsData.features.filter(
+        (feature) => feature.properties.estado === "HERIDO"
+      ),
+    };
 
-    const injuredPromise = fetch(injuredUrl).then((res) => res.json());
-    const deadPromise = fetch(deadUrl).then((res) => res.json());
-
-    const [injured, dead] = await Promise.all([injuredPromise, deadPromise]);
+    const dead = {
+      type: "FeatureCollection",
+      features: victimsData.features.filter(
+        (feature) => feature.properties.estado === "MUERTO"
+      ),
+    };
 
     return {
+      safe,
       injured,
       dead,
     };
+  }
+
+  static async fetchVictimData(
+    filters: Filters,
+    bounds: [number, number, number, number],
+    zoom?: number
+  ): Promise<VictimData> {
+    const data = await DataProvider.fetchData({
+      model: "victims",
+      filters,
+      bounds,
+      zoom,
+    });
+
+    // Process the data to add severity based on estado
+    return {
+      ...data,
+      features: data.features.map((feature) => ({
+        ...feature,
+        properties: {
+          ...feature.properties,
+          severity:
+            VICTIM_STATUS_SEVERITY[feature.properties.estado as VictimStatus] ||
+            1,
+        },
+      })),
+    } as unknown as VictimData;
   }
 
   static processAccidentDataForVisualization(

@@ -1,31 +1,62 @@
+import {
+  VictimCondition,
+  VictimFilters,
+  VictimGender,
+  VictimStatus,
+  defaultVictimFilters,
+} from "../models/victims";
 import { useCallback, useState } from "react";
 
-import { Filters } from "../components/LeftBar";
+import { useDebounce } from "./useDebounce";
 
-const defaultFilters: Filters = {
-  ageRange: [8, 50],
-};
+export function useFilters(
+  initialFilters: VictimFilters = defaultVictimFilters
+) {
+  const [filters, setFilters] = useState<VictimFilters>(initialFilters);
+  const debouncedFilters = useDebounce(filters, 300);
 
-export function useFilters(initialFilters: Filters = defaultFilters) {
-  const [filters, setFilters] = useState<Filters>(initialFilters);
-
-  const updateFilters = useCallback((newFilters: Partial<Filters>) => {
+  const updateFilters = useCallback((newFilters: Partial<VictimFilters>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
 
-  const updateAgeRange = useCallback((ageRange: [number, number]) => {
-    setFilters((prev) => ({ ...prev, ageRange }));
+  const updateEdad = useCallback((edad: [number, number]) => {
+    setFilters((prev) => ({ ...prev, edad: { type: "range", value: edad } }));
+  }, []);
+
+  const updateEstado = useCallback((estado: VictimStatus[]) => {
+    setFilters((prev) => ({
+      ...prev,
+      estado: { type: "list", value: estado },
+    }));
+  }, []);
+
+  const updateCondicion = useCallback((condicion: VictimCondition | "") => {
+    setFilters((prev) => ({
+      ...prev,
+      condicion: { type: "value", value: condicion },
+    }));
+  }, []);
+
+  const updateGenero = useCallback((genero: VictimGender[]) => {
+    setFilters((prev) => ({
+      ...prev,
+      genero: { type: "list", value: genero },
+    }));
   }, []);
 
   const resetFilters = useCallback(() => {
-    setFilters(defaultFilters);
+    setFilters(defaultVictimFilters);
   }, []);
 
   return {
     filters,
+    debouncedFilters,
     setFilters,
     updateFilters,
-    updateAgeRange,
+    updateEdad,
+    updateEstado,
+    updateCondicion,
+    updateGenero,
     resetFilters,
   };
 }
